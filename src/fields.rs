@@ -2,6 +2,9 @@ use core::marker::PhantomData;
 
 use embedded_io::{Read, ReadExactError};
 
+pub trait FrameField<const SIZE: usize>: AsRef<[u8]> + From<[u8; SIZE]> {}
+
+
 pub struct FieldIterator<const SIZE: usize, T: FrameField<SIZE>, R: Read> {
     elements_remaining: usize,
     reader: R,
@@ -34,5 +37,3 @@ impl<const SIZE: usize, T: FrameField<SIZE>, R: Read> Iterator for FieldIterator
         Some(Ok(T::from(buf)))
     }
 }
-
-pub trait FrameField<const SIZE: usize>: AsRef<[u8]> + From<[u8; SIZE]> {}

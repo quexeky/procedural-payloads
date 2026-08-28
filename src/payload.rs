@@ -19,6 +19,7 @@ pub struct Payload<
     reader: R,
 }
 
+//--- Cache impls ---//
 impl<
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
@@ -56,6 +57,7 @@ impl<
     }
 }
 
+// --- UnCached impls --- //
 impl<
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
