@@ -1,7 +1,7 @@
 use core::{marker::PhantomData, mem::MaybeUninit, ops::Deref};
 use embedded_io::{Read, ReadExactError};
 
-pub trait MetadataField<const SIZE: usize>: AsRef<[u8]> + From<[u8; SIZE]> {
+pub trait ReadableMetadataField<const SIZE: usize>: AsRef<[u8]> + From<[u8; SIZE]> {
     fn num_fields(&self) -> usize;
 }
 
@@ -11,14 +11,14 @@ impl MetadataState for Cached {}
 pub struct UnCached;
 impl MetadataState for UnCached {}
 
-pub struct MetadataCache<const SIZE: usize, S: MetadataState, M: MetadataField<SIZE>> {
+pub struct MetadataCache<const SIZE: usize, S: MetadataState, M: ReadableMetadataField<SIZE>> {
     _state: PhantomData<S>,
     metadata: MaybeUninit<M>,
 }
 
 // --- Cached impls --- //
 
-impl<const SIZE: usize, M: MetadataField<SIZE>> Deref for MetadataCache<SIZE, Cached, M> {
+impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> Deref for MetadataCache<SIZE, Cached, M> {
     type Target = M;
 
     fn deref(&self) -> &Self::Target {
@@ -26,7 +26,7 @@ impl<const SIZE: usize, M: MetadataField<SIZE>> Deref for MetadataCache<SIZE, Ca
     }
 }
 
-impl<const SIZE: usize, M: MetadataField<SIZE>> MetadataCache<SIZE, Cached, M> {
+impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> MetadataCache<SIZE, Cached, M> {
     pub fn new_init(metadata: M) -> Self {
         Self {
             _state: PhantomData,
@@ -37,7 +37,7 @@ impl<const SIZE: usize, M: MetadataField<SIZE>> MetadataCache<SIZE, Cached, M> {
 
 // --- UnCached impls --- //
 
-impl<const SIZE: usize, M: MetadataField<SIZE>> MetadataCache<SIZE, UnCached, M> {
+impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> MetadataCache<SIZE, UnCached, M> {
     pub const fn new() -> Self {
         Self {
             _state: PhantomData,

@@ -1,17 +1,17 @@
-use crate::{
-    fields::{FieldIterator, FrameField},
-    metadata::{Cached, MetadataCache, MetadataField, MetadataState, UnCached},
+use crate::read::{
+    fields::{FieldIterator, ReadableFrameField},
+    metadata::{Cached, MetadataCache, ReadableMetadataField, MetadataState, UnCached},
 };
 
 use core::marker::PhantomData;
 use embedded_io::{Read, ReadExactError};
 
-pub struct Payload<
+pub struct ReadablePayload<
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
-    M: MetadataField<METADATA_SIZE>,
+    M: ReadableMetadataField<METADATA_SIZE>,
     S: MetadataState,
-    T: FrameField<FIELD_SIZE>,
+    T: ReadableFrameField<FIELD_SIZE>,
     R: Read,
 > {
     metadata: MetadataCache<METADATA_SIZE, S, M>,
@@ -23,10 +23,10 @@ pub struct Payload<
 impl<
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
-    M: MetadataField<METADATA_SIZE>,
-    T: FrameField<FIELD_SIZE>,
+    M: ReadableMetadataField<METADATA_SIZE>,
+    T: ReadableFrameField<FIELD_SIZE>,
     R: Read,
-> Payload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
+> ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
 {
     pub fn from_metadata(reader: R, metadata: M) -> Self {
         Self {
@@ -43,10 +43,10 @@ impl<
 impl<
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
-    M: MetadataField<METADATA_SIZE>,
-    T: FrameField<FIELD_SIZE>,
+    M: ReadableMetadataField<METADATA_SIZE>,
+    T: ReadableFrameField<FIELD_SIZE>,
     R: Read,
-> IntoIterator for Payload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
+> IntoIterator for ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
 {
     type Item = Result<T, ReadExactError<R::Error>>;
 
@@ -61,10 +61,10 @@ impl<
 impl<
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
-    M: MetadataField<METADATA_SIZE>,
-    T: FrameField<FIELD_SIZE>,
+    M: ReadableMetadataField<METADATA_SIZE>,
+    T: ReadableFrameField<FIELD_SIZE>,
     R: Read,
-> Payload<FIELD_SIZE, METADATA_SIZE, M, UnCached, T, R>
+> ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, UnCached, T, R>
 {
     pub fn new(reader: R) -> Self {
         Self {
@@ -75,9 +75,9 @@ impl<
     }
     pub fn load(
         mut self,
-    ) -> Result<Payload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>, ReadExactError<R::Error>> {
+    ) -> Result<ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>, ReadExactError<R::Error>> {
         let metadata = self.metadata.load(&mut self.reader)?;
-        Ok(Payload {
+        Ok(ReadablePayload {
             metadata,
             _field_iterator_marker: PhantomData,
             reader: self.reader,

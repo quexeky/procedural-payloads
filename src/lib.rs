@@ -1,5 +1,4 @@
 #![no_std]
 
-pub mod fields;
-pub mod metadata;
-pub mod payload;
+pub mod read;
+pub mod write;

@@ -1,6 +1,6 @@
 use core::slice;
 
-use procedural_payloads::{fields::FrameField, metadata::MetadataField, payload::Payload};
+use procedural_payloads::read::{fields::ReadableFrameField, metadata::ReadableMetadataField, payload::ReadablePayload};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Metadata {
@@ -21,7 +21,7 @@ impl AsRef<[u8]> for Metadata {
 struct Field {
     data: u8,
 }
-impl FrameField<1> for Field {}
+impl ReadableFrameField<1> for Field {}
 
 impl From<[u8; 1]> for Field {
     fn from(value: [u8; 1]) -> Self {
@@ -34,7 +34,7 @@ impl AsRef<[u8]> for Field {
     }
 }
 
-impl MetadataField<8> for Metadata {
+impl ReadableMetadataField<8> for Metadata {
     fn num_fields(&self) -> usize {
         64 - 8
     }
@@ -53,7 +53,7 @@ fn create_payload() {
         8, 2, 3, 4, 5, 6, 7, 8, //
     ];
     let metadata_chunk: [u8; 8] = data[0..8].try_into().unwrap();
-    let payload = Payload::new(data.as_slice()).load().unwrap();
+    let payload = ReadablePayload::new(data.as_slice()).load().unwrap();
     let metadata: Metadata = *payload.metadata();
 
     assert_eq!(metadata, Metadata::from(metadata_chunk));
