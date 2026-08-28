@@ -1,6 +1,6 @@
 use core::slice;
 
-use payloads::{fields::FrameField, metadata::MetadataField, payload::Payload};
+use procedural_payloads::{fields::FrameField, metadata::MetadataField, payload::Payload};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Metadata {
