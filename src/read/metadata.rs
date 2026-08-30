@@ -1,7 +1,7 @@
 use core::{marker::PhantomData, mem::MaybeUninit, ops::Deref};
 use embedded_io::{Read, ReadExactError};
 
-pub trait ReadableMetadataField<const SIZE: usize>: AsRef<[u8]> + From<[u8; SIZE]> {
+pub trait ReadableMetadataField<const SIZE: usize>: From<[u8; SIZE]> {
     fn num_fields(&self) -> usize;
 }
 

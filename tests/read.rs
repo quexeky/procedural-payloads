@@ -1,6 +1,6 @@
-use core::slice;
-
-use procedural_payloads::read::{fields::ReadableFrameField, metadata::ReadableMetadataField, payload::ReadablePayload};
+use procedural_payloads::read::{
+    fields::ReadableFrameField, metadata::ReadableMetadataField, payload::ReadablePayload,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct Metadata {
@@ -12,11 +12,6 @@ impl From<[u8; 8]> for Metadata {
         Self { random_data: value }
     }
 }
-impl AsRef<[u8]> for Metadata {
-    fn as_ref(&self) -> &[u8] {
-        self.random_data.as_slice()
-    }
-}
 #[derive(PartialEq, Eq, Debug)]
 struct Field {
     data: u8,
@@ -26,11 +21,6 @@ impl ReadableFrameField<1> for Field {}
 impl From<[u8; 1]> for Field {
     fn from(value: [u8; 1]) -> Self {
         Field { data: value[0] }
-    }
-}
-impl AsRef<[u8]> for Field {
-    fn as_ref(&self) -> &[u8] {
-        slice::from_ref(&self.data)
     }
 }
 
