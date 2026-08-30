@@ -1,5 +1,5 @@
 use procedural_payloads::write::{
-    fields::WritableFrameField, metadata::WritableMetadataField, payload::WritablePayload,
+    error::Error, fields::WritableFrameField, metadata::WritableMetadataField, payload::WritablePayload,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -63,4 +63,149 @@ fn create_payload() {
         payload.write_field(field).expect("Failed to write new field");
     }
     assert_eq!(data, expected_data);
+}
+
+struct EmptyMetadata {
+    fields: usize,
+}
+
+impl WritableMetadataField for EmptyMetadata {
+    fn num_fields(&self) -> usize {
+        self.fields
+    }
+
+    fn write_to<W: embedded_io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
+        writer.write_all(&[])
+    }
+}
+
+#[test]
+fn finish_is_ok_when_all_fields_are_written() {
+    let mut data = [0; 64];
+    let metadata = Metadata {
+        random_data: [0; 8],
+    };
+
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+        .begin(metadata)
+        .unwrap();
+
+    for i in 0..56u8 {
+        payload.write_field(Field { data: i }).unwrap();
+    }
+
+    payload.finish().unwrap();
+}
+
+#[test]
+fn finish_errors_when_no_fields_have_been_written() {
+    let mut data = [0; 64];
+    let metadata = Metadata {
+        random_data: [0; 8],
+    };
+
+    let payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+        .begin(metadata)
+        .unwrap();
+
+    let err = payload.finish().unwrap_err();
+    assert!(matches!(err, Error::InsufficientDataWritten));
+}
+
+#[test]
+fn finish_errors_when_some_fields_are_missing() {
+    let mut data = [0; 64];
+    let metadata = Metadata {
+        random_data: [0; 8],
+    };
+
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+        .begin(metadata)
+        .unwrap();
+
+    for i in 0..10u8 {
+        payload.write_field(Field { data: i }).unwrap();
+    }
+
+    let err = payload.finish().unwrap_err();
+    assert!(matches!(err, Error::InsufficientDataWritten));
+}
+
+#[test]
+fn write_field_errors_after_all_fields_are_written() {
+    let mut data = [0; 64];
+    let metadata = Metadata {
+        random_data: [0; 8],
+    };
+
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+        .begin(metadata)
+        .unwrap();
+
+    for i in 0..56u8 {
+        payload.write_field(Field { data: i }).unwrap();
+    }
+
+    let err = payload
+        .write_field(Field { data: 56 })
+        .unwrap_err();
+
+    assert!(matches!(err, Error::ExcessData));
+}
+
+#[test]
+fn begin_writes_metadata_before_any_fields() {
+    let mut data = [0; 64];
+
+    let _ = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+        .begin(Metadata {
+            random_data: [9; 8],
+        })
+        .unwrap();
+
+    assert_eq!(&data[..8], &[9; 8]);
+    assert_eq!(&data[8..], &[0; 56]);
+}
+
+#[test]
+fn metadata_and_fields_are_written_in_order() {
+    let mut data = [0; 64];
+    let metadata = Metadata {
+        random_data: [0xAB; 8],
+    };
+
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+        .begin(metadata)
+        .unwrap();
+
+    for i in 0..56u8 {
+        payload.write_field(Field { data: i }).unwrap();
+    }
+
+    payload.finish().unwrap();
+
+    assert_eq!(&data[..8], &[0xAB; 8]);
+    for (i, byte) in data[8..].iter().enumerate() {
+        assert_eq!(*byte, i as u8);
+    }
+}
+
+#[test]
+fn begin_rejects_exactly_65536_planned_field_bytes() {
+    let mut buf: [u8; 0] = [];
+
+    let result = WritablePayload::<1, EmptyMetadata, _, Field, _>::new(&mut buf[..])
+        .begin(EmptyMetadata { fields: 65536 });
+
+    assert!(matches!(result, Err(Error::TooMuchPlannedData)));
+}
+
+#[test]
+fn begin_accepts_65535_planned_field_bytes() {
+    let mut buf: [u8; 0] = [];
+
+    let result = WritablePayload::<1, EmptyMetadata, _, Field, _>::new(&mut buf[..])
+        .begin(EmptyMetadata { fields: 65535 });
+
+    assert!(result.is_ok());
 }
