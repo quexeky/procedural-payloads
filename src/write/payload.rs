@@ -10,10 +10,9 @@ use crate::write::{
 
 pub struct WritablePayload<
     'a,
-    const FIELD_SIZE: usize,
     M: WritableMetadataField,
     S: MetadataWriteState,
-    T: WritableFrameField<FIELD_SIZE>,
+    T: WritableFrameField,
     W: Write + ?Sized,
 > {
     _metadata_type: PhantomData<M>,
@@ -24,11 +23,10 @@ pub struct WritablePayload<
 
 impl<
     'a,
-    const FIELD_SIZE: usize,
     M: WritableMetadataField,
-    T: WritableFrameField<FIELD_SIZE>,
+    T: WritableFrameField,
     W: Write + ?Sized,
-> WritablePayload<'a, FIELD_SIZE, M, NotWritten, T, W>
+> WritablePayload<'a, M, NotWritten, T, W>
 {
     pub fn new(writer: &'a mut W) -> Self {
         Self {
@@ -41,10 +39,10 @@ impl<
     pub fn begin(
         mut self,
         metadata: M,
-    ) -> Result<WritablePayload<'a, FIELD_SIZE, M, Written, T, W>, Error<W::Error>> {
+    ) -> Result<WritablePayload<'a, M, Written, T, W>, Error<W::Error>> {
         let num_fields = metadata.num_fields();
         let planned = num_fields
-            .checked_mul(FIELD_SIZE)
+            .checked_mul(T::SIZE)
             .ok_or(Error::TooMuchPlannedData)?;
 
         if planned >= 65536 {
@@ -63,11 +61,10 @@ impl<
 
 impl<
     'a,
-    const FIELD_SIZE: usize,
     M: WritableMetadataField,
-    T: WritableFrameField<FIELD_SIZE>,
+    T: WritableFrameField,
     W: Write + ?Sized,
-> WritablePayload<'a, FIELD_SIZE, M, Written, T, W>
+> WritablePayload<'a, M, Written, T, W>
 {
     pub fn write_field(&mut self, field: T) -> Result<(), Error<W::Error>> {
         if self.metadata_state.fields_remaining == 0 {

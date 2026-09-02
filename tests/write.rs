@@ -19,7 +19,8 @@ impl From<[u8; 8]> for Metadata {
 struct Field {
     data: u8,
 }
-impl WritableFrameField<1> for Field {
+impl WritableFrameField for Field {
+    const SIZE: usize = 1;
     fn write_to<W: embedded_io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
         writer.write_all(&[self.data])
     }
@@ -93,7 +94,7 @@ fn finish_is_ok_when_all_fields_are_written() {
         random_data: [0; 8],
     };
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
+    let mut payload = WritablePayload::<Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -112,7 +113,7 @@ fn finish_errors_when_no_fields_have_been_written() {
         random_data: [0; 8],
     };
 
-    let payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
+    let payload = WritablePayload::<Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -128,7 +129,7 @@ fn finish_errors_when_some_fields_are_missing() {
         random_data: [0; 8],
     };
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
+    let mut payload = WritablePayload::<Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -148,7 +149,7 @@ fn write_field_errors_after_all_fields_are_written() {
         random_data: [0; 8],
     };
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
+    let mut payload = WritablePayload::<Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -166,7 +167,7 @@ fn begin_writes_metadata_before_any_fields() {
     let mut data = [0; 64];
     let mut data_slice = data.as_mut_slice();
 
-    let _ = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
+    let _ = WritablePayload::<Metadata, _, Field, _>::new(&mut data_slice)
         .begin(Metadata {
             random_data: [9; 8],
         })
@@ -184,7 +185,7 @@ fn metadata_and_fields_are_written_in_order() {
         random_data: [0xAB; 8],
     };
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
+    let mut payload = WritablePayload::<Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -205,7 +206,7 @@ fn begin_rejects_exactly_65536_planned_field_bytes() {
     let mut buf: [u8; 0] = [];
     let mut buf_slice = buf.as_mut_slice();
 
-    let result = WritablePayload::<1, EmptyMetadata, _, Field, _>::new(&mut buf_slice)
+    let result = WritablePayload::<EmptyMetadata, _, Field, _>::new(&mut buf_slice)
         .begin(EmptyMetadata { fields: 65536 });
 
     assert!(matches!(result, Err(Error::TooMuchPlannedData)));
@@ -216,7 +217,7 @@ fn begin_accepts_65535_planned_field_bytes() {
     let mut buf: [u8; 0] = [];
     let mut buf_slice = buf.as_mut_slice();
 
-    let result = WritablePayload::<1, EmptyMetadata, _, Field, _>::new(&mut buf_slice)
+    let result = WritablePayload::<EmptyMetadata, _, Field, _>::new(&mut buf_slice)
         .begin(EmptyMetadata { fields: 65535 });
 
     assert!(result.is_ok());
@@ -231,7 +232,7 @@ fn writer_forwards_data_unchanged() {
     };
     let mut writer = Crc32Writer::new(&mut data_slice, Hasher::new());
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut writer)
+    let mut payload = WritablePayload::<Metadata, _, Field, _>::new(&mut writer)
         .begin(metadata)
         .unwrap();
 

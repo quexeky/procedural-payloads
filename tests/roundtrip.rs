@@ -34,7 +34,8 @@ impl ReadableMetadataField<8> for Metadata {
 struct Field {
     data: u8,
 }
-impl WritableFrameField<1> for Field {
+impl WritableFrameField for Field {
+    const SIZE: usize = 1;
     fn write_to<W: embedded_io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
         writer.write_all(&[self.data])
     }
