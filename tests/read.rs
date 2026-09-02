@@ -46,7 +46,9 @@ fn create_payload() {
     let metadata_chunk: [u8; 8] = data[0..8].try_into().unwrap();
     let mut data_slice = data.as_slice();
     let hasher = Hasher::new();
-    let payload = ReadablePayload::new(&mut data_slice, hasher).load().unwrap();
+    let payload = ReadablePayload::new(&mut data_slice, hasher)
+        .load()
+        .unwrap();
     let metadata: Metadata = *payload.metadata();
 
     assert_eq!(metadata, Metadata::from(metadata_chunk));
@@ -121,12 +123,11 @@ fn create_payload_from_existing_metadata() {
     let hasher = Hasher::new();
 
     let metadata = Metadata::from([7; 8]);
-    let payload =
-        ReadablePayload::<1, 8, Metadata, Cached, Field, _>::from_metadata(
-            &mut data_slice,
-            metadata,
-            hasher
-        );
+    let payload = ReadablePayload::<1, 8, Metadata, Cached, Field, _>::from_metadata(
+        &mut data_slice,
+        metadata,
+        hasher,
+    );
 
     assert_eq!(*payload.metadata(), Metadata::from([7; 8]));
 

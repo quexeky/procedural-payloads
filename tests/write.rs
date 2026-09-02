@@ -1,5 +1,6 @@
 use procedural_payloads::write::{
-    error::Error, fields::WritableFrameField, metadata::WritableMetadataField, payload::WritablePayload,
+    error::Error, fields::WritableFrameField, metadata::WritableMetadataField,
+    payload::WritablePayload,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -61,7 +62,9 @@ fn create_payload() {
         .expect("Failed to begin with metadata");
 
     for field in fields {
-        payload.write_field(field).expect("Failed to write new field");
+        payload
+            .write_field(field)
+            .expect("Failed to write new field");
     }
     assert_eq!(data, expected_data);
 }
@@ -151,9 +154,7 @@ fn write_field_errors_after_all_fields_are_written() {
         payload.write_field(Field { data: i }).unwrap();
     }
 
-    let err = payload
-        .write_field(Field { data: 56 })
-        .unwrap_err();
+    let err = payload.write_field(Field { data: 56 }).unwrap_err();
 
     assert!(matches!(err, Error::ExcessData));
 }

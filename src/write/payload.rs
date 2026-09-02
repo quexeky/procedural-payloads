@@ -1,7 +1,6 @@
 use core::marker::PhantomData;
 
-use crc32fast::Hasher;
-use embedded_io::{ErrorType, Write};
+use embedded_io::Write;
 
 use crate::write::{
     error::Error,

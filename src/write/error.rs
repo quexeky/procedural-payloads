@@ -3,7 +3,7 @@ pub enum Error<E> {
     TooMuchPlannedData,
     InsufficientDataWritten,
     ExcessData,
-    Other(E)
+    Other(E),
 }
 
 impl<E: embedded_io::Error> From<E> for Error<E> {

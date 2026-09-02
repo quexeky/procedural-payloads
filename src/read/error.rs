@@ -5,5 +5,5 @@ use thiserror::Error;
 pub enum Error<E: embedded_io::Error, F> {
     ReadExact(#[from] ReadExactError<E>),
     GenericRead(#[from] E),
-    TryFrom(F)
+    TryFrom(F),
 }

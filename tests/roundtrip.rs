@@ -62,7 +62,9 @@ fn write_then_read_roundtrip() {
         random_data: [3; 8],
     };
 
-    let mut writer = WritablePayload::new(&mut data_slice).begin(metadata).unwrap();
+    let mut writer = WritablePayload::new(&mut data_slice)
+        .begin(metadata)
+        .unwrap();
 
     for i in 0..56u8 {
         writer.write_field(Field { data: i }).unwrap();
@@ -72,7 +74,8 @@ fn write_then_read_roundtrip() {
     let mut data_slice = data.as_slice();
     let hasher = Hasher::new();
 
-    let reader = ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(&mut data_slice, hasher);
+    let reader =
+        ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(&mut data_slice, hasher);
     let reader = reader.load().unwrap();
 
     assert_eq!(*reader.metadata(), metadata);

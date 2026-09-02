@@ -56,3 +56,11 @@ impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> MetadataCache<SIZE, UnCa
         })
     }
 }
+
+impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> Default
+    for MetadataCache<SIZE, UnCached, M>
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}

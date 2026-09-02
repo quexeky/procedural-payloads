@@ -1,13 +1,5 @@
-use core::marker::PhantomData;
-
 use crc32fast::Hasher;
 use embedded_io::{ErrorType, Write};
-
-use crate::write::{
-    error::Error,
-    fields::WritableFrameField,
-    metadata::{MetadataWriteState, NotWritten, WritableMetadataField, Written},
-};
 
 pub struct Crc32Writer<'a, W: Write + ?Sized> {
     hasher: Hasher,
