@@ -1,6 +1,8 @@
+use crc32fast::Hasher;
+use embedded_io::Write;
 use procedural_payloads::write::{
-    error::Error, fields::WritableFrameField, metadata::WritableMetadataField,
-    payload::WritablePayload,
+    crc_32_writer::Crc32Writer, error::Error, fields::WritableFrameField,
+    metadata::WritableMetadataField, payload::WritablePayload,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -218,4 +220,73 @@ fn begin_accepts_65535_planned_field_bytes() {
         .begin(EmptyMetadata { fields: 65535 });
 
     assert!(result.is_ok());
+}
+
+#[test]
+fn writer_forwards_data_unchanged() {
+    let mut data = [0; 64];
+    let mut data_slice = data.as_mut_slice();
+    let metadata = Metadata {
+        random_data: [0; 8],
+    };
+    let mut writer = Crc32Writer::new(&mut data_slice, Hasher::new());
+
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut writer)
+        .begin(metadata)
+        .unwrap();
+
+    for i in 0..56u8 {
+        payload.write_field(Field { data: i }).unwrap();
+    }
+    payload.finish().unwrap();
+
+    assert_eq!(writer.finish(), crc32fast::hash(&data));
+}
+
+#[test]
+fn writer_crc_matches_known_vector() {
+    let mut data = [0u8; 9];
+    let mut data_slice = data.as_mut_slice();
+    let mut writer = Crc32Writer::new(&mut data_slice, Hasher::new());
+
+    writer.write_all(b"123456789").unwrap();
+
+    assert_eq!(writer.finish(), 0xCBF43926);
+}
+
+#[test]
+fn writer_crc_matches_chunked_writes() {
+    let mut data = [0u8; 9];
+    let mut data_slice = data.as_mut_slice();
+    let mut writer = Crc32Writer::new(&mut data_slice, Hasher::new());
+
+    for chunk in b"123456789".chunks(3) {
+        let written = writer.write(chunk).unwrap();
+        assert_eq!(written, chunk.len());
+    }
+
+    assert_eq!(writer.finish(), crc32fast::hash(b"123456789"));
+}
+
+#[test]
+fn writer_forwards_bytes_unchanged() {
+    let mut data = [0u8; 9];
+    let mut data_slice = data.as_mut_slice();
+    let mut writer = Crc32Writer::new(&mut data_slice, Hasher::new());
+
+    writer.write_all(b"123456789").unwrap();
+
+    assert_eq!(data, *b"123456789");
+}
+
+#[test]
+fn writer_short_write_crc_covers_only_written_bytes() {
+    let mut data = [0u8; 2];
+    let mut data_slice = data.as_mut_slice();
+    let mut writer = Crc32Writer::new(&mut data_slice, Hasher::new());
+
+    let written = writer.write(&[1, 2, 3, 4, 5]).unwrap();
+    assert_eq!(written, 2);
+
+    assert_eq!(writer.finish(), crc32fast::hash(&[1, 2]));
 }

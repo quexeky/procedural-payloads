@@ -3,9 +3,7 @@ use crate::read::{
     fields::{FieldIterator, ReadableFrameField},
     metadata::{Cached, MetadataCache, MetadataState, ReadableMetadataField, UnCached},
 };
-
 use core::marker::PhantomData;
-use crc32fast::Hasher;
 use embedded_io::{Read, ReadExactError};
 
 pub struct ReadablePayload<
@@ -20,7 +18,6 @@ pub struct ReadablePayload<
     metadata: MetadataCache<METADATA_SIZE, S, M>,
     _field_iterator_marker: PhantomData<T>,
     reader: &'a mut R,
-    hasher: Hasher,
 }
 
 //--- Cache impls ---//
@@ -33,12 +30,11 @@ impl<
     R: Read,
 > ReadablePayload<'a, FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
 {
-    pub fn from_metadata(reader: &'a mut R, metadata: M, hasher: Hasher) -> Self {
+    pub fn from_metadata(reader: &'a mut R, metadata: M) -> Self {
         Self {
             metadata: MetadataCache::new_init(metadata),
             _field_iterator_marker: PhantomData,
             reader,
-            hasher,
         }
     }
     pub fn metadata(&self) -> &M {
@@ -74,12 +70,11 @@ impl<
     R: Read,
 > ReadablePayload<'a, FIELD_SIZE, METADATA_SIZE, M, UnCached, T, R>
 {
-    pub fn new(reader: &'a mut R, hasher: Hasher) -> Self {
+    pub fn new(reader: &'a mut R) -> Self {
         Self {
             metadata: MetadataCache::new(),
             _field_iterator_marker: PhantomData,
             reader,
-            hasher,
         }
     }
     pub fn load(
@@ -93,7 +88,6 @@ impl<
             metadata,
             _field_iterator_marker: PhantomData,
             reader: self.reader,
-            hasher: self.hasher,
         })
     }
 }
