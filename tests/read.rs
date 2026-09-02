@@ -1,3 +1,4 @@
+use crc32fast::Hasher;
 use procedural_payloads::read::{
     fields::ReadableFrameField, metadata::ReadableMetadataField, payload::ReadablePayload,
 };
@@ -43,7 +44,9 @@ fn create_payload() {
         8, 2, 3, 4, 5, 6, 7, 8, //
     ];
     let metadata_chunk: [u8; 8] = data[0..8].try_into().unwrap();
-    let payload = ReadablePayload::new(data.as_slice()).load().unwrap();
+    let mut data_slice = data.as_slice();
+    let hasher = Hasher::new();
+    let payload = ReadablePayload::new(&mut data_slice, hasher).load().unwrap();
     let metadata: Metadata = *payload.metadata();
 
     assert_eq!(metadata, Metadata::from(metadata_chunk));
@@ -61,9 +64,11 @@ use procedural_payloads::read::metadata::{Cached, UnCached};
 #[test]
 fn load_fails_when_metadata_is_short() {
     let short = [0u8; 7];
+    let mut short_slice = short.as_slice();
+    let hasher = Hasher::new();
 
     let payload =
-        ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(short.as_slice());
+        ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(&mut short_slice, hasher);
 
     assert!(payload.load().is_err());
 }
@@ -71,9 +76,11 @@ fn load_fails_when_metadata_is_short() {
 #[test]
 fn iterator_reports_read_error_when_fields_are_missing() {
     let data = [0u8; 10];
+    let mut data_slice = data.as_slice();
+    let hasher = Hasher::new();
 
     let payload =
-        ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(data.as_slice());
+        ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(&mut data_slice, hasher);
     let payload = payload.load().unwrap();
 
     let mut iter = payload.into_iter();
@@ -86,9 +93,12 @@ fn iterator_reports_read_error_when_fields_are_missing() {
 #[test]
 fn iterator_returns_exactly_metadata_field_count() {
     let data = [1u8; 64];
+    let mut data_slice = data.as_slice();
+
+    let hasher = Hasher::new();
 
     let payload =
-        ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(data.as_slice());
+        ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(&mut data_slice, hasher);
     let payload = payload.load().unwrap();
 
     let mut count = 0;
@@ -106,12 +116,16 @@ fn create_payload_from_existing_metadata() {
     for (i, byte) in field_data.iter_mut().enumerate() {
         *byte = i as u8;
     }
+    let mut data_slice = field_data.as_slice();
+
+    let hasher = Hasher::new();
 
     let metadata = Metadata::from([7; 8]);
     let payload =
         ReadablePayload::<1, 8, Metadata, Cached, Field, _>::from_metadata(
-            field_data.as_slice(),
+            &mut data_slice,
             metadata,
+            hasher
         );
 
     assert_eq!(*payload.metadata(), Metadata::from([7; 8]));
@@ -124,8 +138,8 @@ fn create_payload_from_existing_metadata() {
 #[test]
 fn field_iterator_returns_none_when_no_fields_remain() {
     let data: [u8; 0] = [];
-
-    let mut iter = FieldIterator::<1, Field, _>::new(0, data.as_slice());
+    let mut data_slice = data.as_slice();
+    let mut iter = FieldIterator::<1, Field, _>::new(0, &mut data_slice);
 
     assert!(iter.next().is_none());
 }
@@ -133,8 +147,9 @@ fn field_iterator_returns_none_when_no_fields_remain() {
 #[test]
 fn field_iterator_reads_each_field() {
     let data = [1u8, 2u8];
+    let mut data_slice = data.as_slice();
 
-    let mut iter = FieldIterator::<1, Field, _>::new(2, data.as_slice());
+    let mut iter = FieldIterator::<1, Field, _>::new(2, &mut data_slice);
 
     assert_eq!(iter.next().unwrap().unwrap(), Field { data: 1 });
     assert_eq!(iter.next().unwrap().unwrap(), Field { data: 2 });

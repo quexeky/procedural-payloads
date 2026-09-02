@@ -41,6 +41,7 @@ impl WritableMetadataField for Metadata {
 #[test]
 fn create_payload() {
     let mut data = [0; 64];
+    let mut data_slice = data.as_mut_slice();
     let expected_data = [
         0, 0, 0, 0, 0, 0, 0, 0, //
         0, 1, 2, 3, 4, 5, 6, 7, //
@@ -55,7 +56,7 @@ fn create_payload() {
     let metadata = Metadata {
         random_data: [0; 8],
     };
-    let mut payload = WritablePayload::new(&mut data[..])
+    let mut payload = WritablePayload::new(&mut data_slice)
         .begin(metadata)
         .expect("Failed to begin with metadata");
 
@@ -82,11 +83,12 @@ impl WritableMetadataField for EmptyMetadata {
 #[test]
 fn finish_is_ok_when_all_fields_are_written() {
     let mut data = [0; 64];
+    let mut data_slice = data.as_mut_slice();
     let metadata = Metadata {
         random_data: [0; 8],
     };
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -100,11 +102,12 @@ fn finish_is_ok_when_all_fields_are_written() {
 #[test]
 fn finish_errors_when_no_fields_have_been_written() {
     let mut data = [0; 64];
+    let mut data_slice = data.as_mut_slice();
     let metadata = Metadata {
         random_data: [0; 8],
     };
 
-    let payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+    let payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -115,11 +118,12 @@ fn finish_errors_when_no_fields_have_been_written() {
 #[test]
 fn finish_errors_when_some_fields_are_missing() {
     let mut data = [0; 64];
+    let mut data_slice = data.as_mut_slice();
     let metadata = Metadata {
         random_data: [0; 8],
     };
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -134,11 +138,12 @@ fn finish_errors_when_some_fields_are_missing() {
 #[test]
 fn write_field_errors_after_all_fields_are_written() {
     let mut data = [0; 64];
+    let mut data_slice = data.as_mut_slice();
     let metadata = Metadata {
         random_data: [0; 8],
     };
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -156,8 +161,9 @@ fn write_field_errors_after_all_fields_are_written() {
 #[test]
 fn begin_writes_metadata_before_any_fields() {
     let mut data = [0; 64];
+    let mut data_slice = data.as_mut_slice();
 
-    let _ = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+    let _ = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
         .begin(Metadata {
             random_data: [9; 8],
         })
@@ -170,11 +176,12 @@ fn begin_writes_metadata_before_any_fields() {
 #[test]
 fn metadata_and_fields_are_written_in_order() {
     let mut data = [0; 64];
+    let mut data_slice = data.as_mut_slice();
     let metadata = Metadata {
         random_data: [0xAB; 8],
     };
 
-    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data[..])
+    let mut payload = WritablePayload::<1, Metadata, _, Field, _>::new(&mut data_slice)
         .begin(metadata)
         .unwrap();
 
@@ -193,8 +200,9 @@ fn metadata_and_fields_are_written_in_order() {
 #[test]
 fn begin_rejects_exactly_65536_planned_field_bytes() {
     let mut buf: [u8; 0] = [];
+    let mut buf_slice = buf.as_mut_slice();
 
-    let result = WritablePayload::<1, EmptyMetadata, _, Field, _>::new(&mut buf[..])
+    let result = WritablePayload::<1, EmptyMetadata, _, Field, _>::new(&mut buf_slice)
         .begin(EmptyMetadata { fields: 65536 });
 
     assert!(matches!(result, Err(Error::TooMuchPlannedData)));
@@ -203,8 +211,9 @@ fn begin_rejects_exactly_65536_planned_field_bytes() {
 #[test]
 fn begin_accepts_65535_planned_field_bytes() {
     let mut buf: [u8; 0] = [];
+    let mut buf_slice = buf.as_mut_slice();
 
-    let result = WritablePayload::<1, EmptyMetadata, _, Field, _>::new(&mut buf[..])
+    let result = WritablePayload::<1, EmptyMetadata, _, Field, _>::new(&mut buf_slice)
         .begin(EmptyMetadata { fields: 65535 });
 
     assert!(result.is_ok());

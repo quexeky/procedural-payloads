@@ -1,12 +1,15 @@
 use crate::read::{
+    error::Error,
     fields::{FieldIterator, ReadableFrameField},
-    metadata::{Cached, MetadataCache, ReadableMetadataField, MetadataState, UnCached},
+    metadata::{Cached, MetadataCache, MetadataState, ReadableMetadataField, UnCached},
 };
 
 use core::marker::PhantomData;
+use crc32fast::Hasher;
 use embedded_io::{Read, ReadExactError};
 
 pub struct ReadablePayload<
+    'a,
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
     M: ReadableMetadataField<METADATA_SIZE>,
@@ -16,23 +19,26 @@ pub struct ReadablePayload<
 > {
     metadata: MetadataCache<METADATA_SIZE, S, M>,
     _field_iterator_marker: PhantomData<T>,
-    reader: R,
+    reader: &'a mut R,
+    hasher: Hasher,
 }
 
 //--- Cache impls ---//
 impl<
+    'a,
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
     M: ReadableMetadataField<METADATA_SIZE>,
     T: ReadableFrameField<FIELD_SIZE>,
     R: Read,
-> ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
+> ReadablePayload<'a, FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
 {
-    pub fn from_metadata(reader: R, metadata: M) -> Self {
+    pub fn from_metadata(reader: &'a mut R, metadata: M, hasher: Hasher) -> Self {
         Self {
             metadata: MetadataCache::new_init(metadata),
             _field_iterator_marker: PhantomData,
             reader,
+            hasher,
         }
     }
     pub fn metadata(&self) -> &M {
@@ -41,16 +47,17 @@ impl<
 }
 
 impl<
+    'a,
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
     M: ReadableMetadataField<METADATA_SIZE>,
     T: ReadableFrameField<FIELD_SIZE>,
     R: Read,
-> IntoIterator for ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
+> IntoIterator for ReadablePayload<'a, FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
 {
-    type Item = Result<T, ReadExactError<R::Error>>;
+    type Item = Result<T, Error<R::Error, <T as TryFrom<[u8; FIELD_SIZE]>>::Error>>;
 
-    type IntoIter = FieldIterator<FIELD_SIZE, T, R>;
+    type IntoIter = FieldIterator<'a, FIELD_SIZE, T, R>;
 
     fn into_iter(self) -> Self::IntoIter {
         FieldIterator::new(self.metadata.num_fields(), self.reader)
@@ -59,28 +66,34 @@ impl<
 
 // --- UnCached impls --- //
 impl<
+    'a,
     const FIELD_SIZE: usize,
     const METADATA_SIZE: usize,
     M: ReadableMetadataField<METADATA_SIZE>,
     T: ReadableFrameField<FIELD_SIZE>,
     R: Read,
-> ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, UnCached, T, R>
+> ReadablePayload<'a, FIELD_SIZE, METADATA_SIZE, M, UnCached, T, R>
 {
-    pub fn new(reader: R) -> Self {
+    pub fn new(reader: &'a mut R, hasher: Hasher) -> Self {
         Self {
             metadata: MetadataCache::new(),
             _field_iterator_marker: PhantomData,
             reader,
+            hasher,
         }
     }
     pub fn load(
         mut self,
-    ) -> Result<ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>, ReadExactError<R::Error>> {
+    ) -> Result<
+        ReadablePayload<'a, FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>,
+        ReadExactError<R::Error>,
+    > {
         let metadata = self.metadata.load(&mut self.reader)?;
         Ok(ReadablePayload {
             metadata,
             _field_iterator_marker: PhantomData,
             reader: self.reader,
+            hasher: self.hasher,
         })
     }
 }
