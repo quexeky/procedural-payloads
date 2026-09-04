@@ -9,26 +9,24 @@ use crate::write::{
 };
 
 pub struct WritablePayload<
-    'a,
     M: WritableMetadataField,
     S: MetadataWriteState,
     T: WritableFrameField,
-    W: Write + ?Sized,
+    W: Write,
 > {
     _metadata_type: PhantomData<M>,
     metadata_state: S,
     _frame_type: PhantomData<T>,
-    writer: &'a mut W,
+    writer: W,
 }
 
 impl<
-    'a,
     M: WritableMetadataField,
     T: WritableFrameField,
-    W: Write + ?Sized,
-> WritablePayload<'a, M, NotWritten, T, W>
+    W: Write,
+> WritablePayload<M, NotWritten, T, W>
 {
-    pub fn new(writer: &'a mut W) -> Self {
+    pub fn new(writer: W) -> Self {
         Self {
             _metadata_type: PhantomData,
             metadata_state: NotWritten,
@@ -39,7 +37,7 @@ impl<
     pub fn begin(
         mut self,
         metadata: M,
-    ) -> Result<WritablePayload<'a, M, Written, T, W>, Error<W::Error>> {
+    ) -> Result<WritablePayload<M, Written, T, W>, Error<W::Error>> {
         let num_fields = metadata.num_fields();
         let planned = num_fields
             .checked_mul(T::SIZE)
@@ -63,8 +61,8 @@ impl<
     'a,
     M: WritableMetadataField,
     T: WritableFrameField,
-    W: Write + ?Sized,
-> WritablePayload<'a, M, Written, T, W>
+    W: Write,
+> WritablePayload<M, Written, T, W>
 {
     pub fn write_field(&mut self, field: T) -> Result<(), Error<W::Error>> {
         if self.metadata_state.fields_remaining == 0 {
@@ -77,7 +75,7 @@ impl<
     pub fn fields_remaining(&self) -> usize {
         self.metadata_state.fields_remaining
     }
-    pub fn finish(self) -> Result<&'a mut W, Error<W::Error>> {
+    pub fn finish(mut self) -> Result<W, Error<W::Error>> {
         if self.metadata_state.fields_remaining != 0 {
             return Err(Error::InsufficientDataWritten);
         }

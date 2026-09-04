@@ -5,14 +5,14 @@ use crate::read::error::Error;
 
 pub trait ReadableFrameField<const SIZE: usize>: TryFrom<[u8; SIZE]> {}
 
-pub struct FieldIterator<'a, const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> {
+pub struct FieldIterator<const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> {
     elements_remaining: usize,
-    reader: &'a mut R,
+    reader: R,
     _frame_type: PhantomData<T>,
 }
 
-impl<'a, const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> FieldIterator<'a, SIZE, T, R> {
-    pub fn new(num_fields: usize, reader: &'a mut R) -> Self {
+impl<'a, const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> FieldIterator<SIZE, T, R> {
+    pub fn new(num_fields: usize, reader: R) -> Self {
         Self {
             elements_remaining: num_fields,
             reader,
@@ -23,7 +23,7 @@ impl<'a, const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> FieldIterator<
 }
 
 impl<'a, const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> Iterator
-    for FieldIterator<'a, SIZE, T, R>
+    for FieldIterator<SIZE, T, R>
 {
     type Item = Result<T, Error<R::Error, <T as TryFrom<[u8; SIZE]>>::Error>>;
 
