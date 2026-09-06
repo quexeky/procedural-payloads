@@ -1,3 +1,6 @@
+#![feature(generic_const_exprs)]
+#![allow(incomplete_features)]
+
 use crc32fast::Hasher;
 use embedded_io::{Read, Write};
 use procedural_payloads::write::{
@@ -6,31 +9,25 @@ use procedural_payloads::write::{
 use procedural_payloads::{
     read::{
         crc_32_reader::Crc32Reader,
-        fields::ReadableFrameField,
         metadata::{ReadableMetadataField, UnCached},
         payload::ReadablePayload,
     },
     write::crc_32_writer::Crc32Writer,
 };
+use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, IntoBytes, KnownLayout, Immutable, TryFromBytes)]
 struct Metadata {
     random_data: [u8; 8],
 }
 
-impl From<[u8; 8]> for Metadata {
-    fn from(value: [u8; 8]) -> Self {
-        Self { random_data: value }
-    }
-}
-
-impl ReadableMetadataField<8> for Metadata {
+impl ReadableMetadataField for Metadata {
     fn num_fields(&self) -> usize {
         64 - 8
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, IntoBytes, KnownLayout, Immutable, TryFromBytes)]
 struct Field {
     data: u8,
 }
@@ -41,21 +38,10 @@ impl WritableFrameField for Field {
     }
 }
 
-impl From<[u8; 1]> for Field {
-    fn from(value: [u8; 1]) -> Self {
-        Field { data: value[0] }
-    }
-}
-
-impl ReadableFrameField<1> for Field {}
 
 impl WritableMetadataField for Metadata {
     fn num_fields(&self) -> usize {
         64 - 8
-    }
-
-    fn write_to<W: embedded_io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
-        writer.write_all(&self.random_data)
     }
 }
 
@@ -79,7 +65,7 @@ fn write_then_read_roundtrip() {
     writer.finish().unwrap();
     let mut data_slice = data.as_slice();
 
-    let reader = ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(&mut data_slice);
+    let reader = ReadablePayload::<Metadata, UnCached, Field, _>::new(&mut data_slice);
     let reader = reader.load().unwrap();
 
     assert_eq!(*reader.metadata(), metadata);
@@ -113,7 +99,7 @@ fn write_then_read_roundtrip_with_crc() {
     let mut data_slice = data.as_slice();
     let mut hasher = Crc32Reader::new(&mut data_slice, Hasher::new());
 
-    let reader = ReadablePayload::<1, 8, Metadata, UnCached, Field, _>::new(&mut hasher);
+    let reader = ReadablePayload::<Metadata, UnCached, Field, _>::new(&mut hasher);
     let reader = reader.load().unwrap();
 
     assert_eq!(*reader.metadata(), metadata);

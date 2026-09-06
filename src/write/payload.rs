@@ -20,11 +20,8 @@ pub struct WritablePayload<
     writer: W,
 }
 
-impl<
-    M: WritableMetadataField,
-    T: WritableFrameField,
-    W: Write,
-> WritablePayload<M, NotWritten, T, W>
+impl<M: WritableMetadataField, T: WritableFrameField, W: Write>
+    WritablePayload<M, NotWritten, T, W>
 {
     pub fn new(writer: W) -> Self {
         Self {
@@ -42,10 +39,11 @@ impl<
         let planned = num_fields
             .checked_mul(T::SIZE)
             .ok_or(Error::TooMuchPlannedData)?;
-
+        
         if planned >= 65536 {
             return Err(Error::TooMuchPlannedData);
         }
+        
         metadata.write_to(&mut self.writer)?;
 
         Ok(WritablePayload {
@@ -57,12 +55,8 @@ impl<
     }
 }
 
-impl<
-    'a,
-    M: WritableMetadataField,
-    T: WritableFrameField,
-    W: Write,
-> WritablePayload<M, Written, T, W>
+impl<'a, M: WritableMetadataField, T: WritableFrameField, W: Write>
+    WritablePayload<M, Written, T, W>
 {
     pub fn write_field(&mut self, field: T) -> Result<(), Error<W::Error>> {
         if self.metadata_state.fields_remaining == 0 {

@@ -4,30 +4,22 @@ use crate::read::{
     metadata::{Cached, MetadataCache, MetadataState, ReadableMetadataField, UnCached},
 };
 use core::marker::PhantomData;
-use embedded_io::{Read, ReadExactError};
+use embedded_io::Read;
 
 pub struct ReadablePayload<
-    const FIELD_SIZE: usize,
-    const METADATA_SIZE: usize,
-    M: ReadableMetadataField<METADATA_SIZE>,
+    M: ReadableMetadataField,
     S: MetadataState,
-    T: ReadableFrameField<FIELD_SIZE>,
+    T: ReadableFrameField,
     R: Read,
 > {
-    metadata: MetadataCache<METADATA_SIZE, S, M>,
+    metadata: MetadataCache<S, M>,
     _field_iterator_marker: PhantomData<T>,
     reader: R,
 }
 
 //--- Cache impls ---//
-impl<
-    'a,
-    const FIELD_SIZE: usize,
-    const METADATA_SIZE: usize,
-    M: ReadableMetadataField<METADATA_SIZE>,
-    T: ReadableFrameField<FIELD_SIZE>,
-    R: Read,
-> ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
+impl<'a, M: ReadableMetadataField, T: ReadableFrameField, R: Read>
+    ReadablePayload<M, Cached, T, R>
 {
     pub fn from_metadata(reader: R, metadata: M) -> Self {
         Self {
@@ -41,18 +33,14 @@ impl<
     }
 }
 
-impl<
-    'a,
-    const FIELD_SIZE: usize,
-    const METADATA_SIZE: usize,
-    M: ReadableMetadataField<METADATA_SIZE>,
-    T: ReadableFrameField<FIELD_SIZE>,
-    R: Read,
-> IntoIterator for ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>
+impl<'a, M: ReadableMetadataField, T: ReadableFrameField, R: Read> IntoIterator
+    for ReadablePayload<M, Cached, T, R>
+where
+    [(); T::SIZE]:,
 {
-    type Item = Result<T, Error<R::Error, <T as TryFrom<[u8; FIELD_SIZE]>>::Error>>;
+    type Item = Result<T, Error<R::Error>>;
 
-    type IntoIter = FieldIterator<FIELD_SIZE, T, R>;
+    type IntoIter = FieldIterator<T, R>;
 
     fn into_iter(self) -> Self::IntoIter {
         FieldIterator::new(self.metadata.num_fields(), self.reader)
@@ -60,14 +48,8 @@ impl<
 }
 
 // --- UnCached impls --- //
-impl<
-    'a,
-    const FIELD_SIZE: usize,
-    const METADATA_SIZE: usize,
-    M: ReadableMetadataField<METADATA_SIZE>,
-    T: ReadableFrameField<FIELD_SIZE>,
-    R: Read,
-> ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, UnCached, T, R>
+impl<'a, M: ReadableMetadataField, T: ReadableFrameField, R: Read>
+    ReadablePayload<M, UnCached, T, R>
 {
     pub fn new(reader: R) -> Self {
         Self {
@@ -76,12 +58,10 @@ impl<
             reader,
         }
     }
-    pub fn load(
-        mut self,
-    ) -> Result<
-        ReadablePayload<FIELD_SIZE, METADATA_SIZE, M, Cached, T, R>,
-        ReadExactError<R::Error>,
-    > {
+    pub fn load(mut self) -> Result<ReadablePayload<M, Cached, T, R>, Error<R::Error>>
+    where
+        [(); M::SIZE]:,
+    {
         let metadata = self.metadata.load(&mut self.reader)?;
         Ok(ReadablePayload {
             metadata,

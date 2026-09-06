@@ -1,8 +1,7 @@
-use embedded_io::Write;
+use crate::write::writeable::Writeable;
 
-pub trait WritableMetadataField {
+pub trait WritableMetadataField: Writeable {
     fn num_fields(&self) -> usize;
-    fn write_to<W: Write>(self, writer: &mut W) -> Result<(), W::Error>;
 }
 
 pub trait MetadataWriteState {}

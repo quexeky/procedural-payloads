@@ -1,17 +1,26 @@
 use core::marker::PhantomData;
 use embedded_io::Read;
+use zerocopy::TryFromBytes;
 
-use crate::read::error::Error;
+use crate::read::{error::Error, readable::Readable};
 
-pub trait ReadableFrameField<const SIZE: usize>: TryFrom<[u8; SIZE]> {}
+pub trait ReadableFrameField: Readable {}
 
-pub struct FieldIterator<const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> {
+impl<T: TryFromBytes> ReadableFrameField for T {}
+
+pub struct FieldIterator<T: ReadableFrameField, R: Read>
+where
+    [(); T::SIZE]:,
+{
     elements_remaining: usize,
     reader: R,
     _frame_type: PhantomData<T>,
 }
 
-impl<'a, const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> FieldIterator<SIZE, T, R> {
+impl<'a, T: ReadableFrameField, R: Read> FieldIterator<T, R>
+where
+    [(); T::SIZE]:,
+{
     pub fn new(num_fields: usize, reader: R) -> Self {
         Self {
             elements_remaining: num_fields,
@@ -22,22 +31,23 @@ impl<'a, const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> FieldIterator<
     pub fn finish(self) {}
 }
 
-impl<'a, const SIZE: usize, T: ReadableFrameField<SIZE>, R: Read> Iterator
-    for FieldIterator<SIZE, T, R>
+impl<'a, T: ReadableFrameField, R: Read> Iterator for FieldIterator<T, R>
+where
+    [(); T::SIZE]:,
 {
-    type Item = Result<T, Error<R::Error, <T as TryFrom<[u8; SIZE]>>::Error>>;
+    type Item = Result<T, Error<R::Error>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.elements_remaining == 0 {
             return None;
         }
-        let mut buf = [0; SIZE];
+        let mut buf = [0u8; T::SIZE];
         match self.reader.read_exact(&mut buf) {
             Ok(()) => {}
             Err(e) => return Some(Err(e.into())),
         };
         self.elements_remaining -= 1;
-        let next = T::try_from(buf);
-        Some(next.map_err(Error::TryFrom))
+        let next = T::read::<R>(buf);
+        Some(next.map_err(|_| Error::InvalidCast))
     }
 }

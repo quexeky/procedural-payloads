@@ -4,8 +4,9 @@ use procedural_payloads::write::{
     crc_32_writer::Crc32Writer, error::Error, fields::WritableFrameField,
     metadata::WritableMetadataField, payload::WritablePayload,
 };
+use zerocopy::{Immutable, IntoBytes};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, IntoBytes, Immutable)]
 struct Metadata {
     random_data: [u8; 8],
 }
@@ -15,7 +16,7 @@ impl From<[u8; 8]> for Metadata {
         Self { random_data: value }
     }
 }
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, IntoBytes, Immutable)]
 struct Field {
     data: u8,
 }
@@ -35,10 +36,6 @@ impl From<[u8; 1]> for Field {
 impl WritableMetadataField for Metadata {
     fn num_fields(&self) -> usize {
         64 - 8
-    }
-
-    fn write_to<W: embedded_io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
-        writer.write_all(&self.random_data)
     }
 }
 
@@ -72,6 +69,7 @@ fn create_payload() {
     assert_eq!(data, expected_data);
 }
 
+#[derive(IntoBytes, Immutable)]
 struct EmptyMetadata {
     fields: usize,
 }
@@ -79,10 +77,6 @@ struct EmptyMetadata {
 impl WritableMetadataField for EmptyMetadata {
     fn num_fields(&self) -> usize {
         self.fields
-    }
-
-    fn write_to<W: embedded_io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
-        writer.write_all(&[])
     }
 }
 
@@ -214,7 +208,7 @@ fn begin_rejects_exactly_65536_planned_field_bytes() {
 
 #[test]
 fn begin_accepts_65535_planned_field_bytes() {
-    let mut buf: [u8; 0] = [];
+    let mut buf: [u8; 8] = [0; 8];
     let mut buf_slice = buf.as_mut_slice();
 
     let result = WritablePayload::<EmptyMetadata, _, Field, _>::new(&mut buf_slice)

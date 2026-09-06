@@ -1,7 +1,9 @@
 use core::{marker::PhantomData, mem::MaybeUninit, ops::Deref};
-use embedded_io::{Read, ReadExactError};
+use embedded_io::Read;
 
-pub trait ReadableMetadataField<const SIZE: usize>: From<[u8; SIZE]> {
+use crate::read::{error::Error, readable::Readable};
+
+pub trait ReadableMetadataField: Readable {
     fn num_fields(&self) -> usize;
 }
 
@@ -11,14 +13,14 @@ impl MetadataState for Cached {}
 pub struct UnCached;
 impl MetadataState for UnCached {}
 
-pub struct MetadataCache<const SIZE: usize, S: MetadataState, M: ReadableMetadataField<SIZE>> {
+pub struct MetadataCache<S: MetadataState, M: ReadableMetadataField> {
     _state: PhantomData<S>,
     metadata: MaybeUninit<M>,
 }
 
 // --- Cached impls --- //
 
-impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> Deref for MetadataCache<SIZE, Cached, M> {
+impl<M: ReadableMetadataField> Deref for MetadataCache<Cached, M> {
     type Target = M;
 
     fn deref(&self) -> &Self::Target {
@@ -26,7 +28,7 @@ impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> Deref for MetadataCache<
     }
 }
 
-impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> MetadataCache<SIZE, Cached, M> {
+impl<M: ReadableMetadataField> MetadataCache<Cached, M> {
     pub fn new_init(metadata: M) -> Self {
         Self {
             _state: PhantomData,
@@ -37,29 +39,28 @@ impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> MetadataCache<SIZE, Cach
 
 // --- UnCached impls --- //
 
-impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> MetadataCache<SIZE, UnCached, M> {
+impl<M: ReadableMetadataField> MetadataCache<UnCached, M> {
     pub const fn new() -> Self {
         Self {
             _state: PhantomData,
             metadata: MaybeUninit::uninit(),
         }
     }
-    pub fn load<R: Read>(
-        self,
-        reader: &mut R,
-    ) -> Result<MetadataCache<SIZE, Cached, M>, ReadExactError<R::Error>> {
-        let mut buf = [0; SIZE];
+    pub fn load<R: Read>(self, reader: &mut R) -> Result<MetadataCache<Cached, M>, Error<R::Error>>
+    where
+        [(); M::SIZE]:,
+    {
+        let mut buf = [0u8; M::SIZE];
         reader.read_exact(&mut buf)?;
+
         Ok(MetadataCache {
             _state: PhantomData,
-            metadata: MaybeUninit::new(M::from(buf)),
+            metadata: MaybeUninit::new(M::read::<R>(buf)?),
         })
     }
 }
 
-impl<const SIZE: usize, M: ReadableMetadataField<SIZE>> Default
-    for MetadataCache<SIZE, UnCached, M>
-{
+impl<M: ReadableMetadataField> Default for MetadataCache<UnCached, M> {
     fn default() -> Self {
         Self::new()
     }

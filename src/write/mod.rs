@@ -3,3 +3,4 @@ pub mod error;
 pub mod fields;
 pub mod metadata;
 pub mod payload;
+pub mod writeable;
