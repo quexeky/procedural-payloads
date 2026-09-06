@@ -42,11 +42,11 @@ where
             return None;
         }
         let mut buf = [0u8; T::SIZE];
+        self.elements_remaining -= 1;
         match self.reader.read_exact(&mut buf) {
             Ok(()) => {}
             Err(e) => return Some(Err(e.into())),
         };
-        self.elements_remaining -= 1;
         let next = T::read::<R>(buf);
         Some(next.map_err(|_| Error::InvalidCast))
     }
