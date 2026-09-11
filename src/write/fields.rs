@@ -1,7 +1,11 @@
-use embedded_io::Write;
 use zerocopy::{Immutable, IntoBytes};
 
-pub trait WritableFrameField: IntoBytes + Immutable {
+use crate::write::writeable::Writeable;
+
+pub trait WritableFrameField: Writeable + Sized {
     const SIZE: usize;
-    fn write_to<W: Write>(self, writer: &mut W) -> Result<(), W::Error>;
+}
+
+impl<T: IntoBytes + Immutable> WritableFrameField for T {
+    const SIZE: usize = size_of::<T>();
 }

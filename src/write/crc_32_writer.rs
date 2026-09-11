@@ -24,10 +24,14 @@ impl<W: Write> Crc32Writer<W> {
     pub fn new(writer: W, hasher: Hasher) -> Self {
         Self { hasher, writer }
     }
-    pub fn into_inner(self) -> Hasher {
-        self.hasher
+    pub fn into_inner(self) -> (Hasher, W) {
+        (self.hasher, self.writer)
     }
     pub fn finish(self) -> u32 {
         self.hasher.finalize()
+    }
+    pub fn write_finish(mut self) -> Result<(), W::Error> {
+        let hash = self.hasher.finalize();
+        self.writer.write_all(&hash.to_be_bytes())
     }
 }

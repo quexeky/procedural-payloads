@@ -4,7 +4,7 @@
 use crc32fast::Hasher;
 use embedded_io::{Read, Write};
 use procedural_payloads::write::{
-    fields::WritableFrameField, metadata::WritableMetadataField, payload::WritablePayload,
+    metadata::WritableMetadataField, payload::WritablePayload,
 };
 use procedural_payloads::{
     read::{
@@ -31,13 +31,6 @@ impl ReadableMetadataField for Metadata {
 struct Field {
     data: u8,
 }
-impl WritableFrameField for Field {
-    const SIZE: usize = 1;
-    fn write_to<W: embedded_io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
-        writer.write_all(&[self.data])
-    }
-}
-
 
 impl WritableMetadataField for Metadata {
     fn num_fields(&self) -> usize {

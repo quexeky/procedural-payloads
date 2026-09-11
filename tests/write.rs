@@ -1,8 +1,8 @@
 use crc32fast::Hasher;
 use embedded_io::Write;
 use procedural_payloads::write::{
-    crc_32_writer::Crc32Writer, error::Error, fields::WritableFrameField,
-    metadata::WritableMetadataField, payload::WritablePayload,
+    crc_32_writer::Crc32Writer, error::Error, metadata::WritableMetadataField,
+    payload::WritablePayload,
 };
 use zerocopy::{Immutable, IntoBytes};
 
@@ -19,12 +19,6 @@ impl From<[u8; 8]> for Metadata {
 #[derive(PartialEq, Eq, Debug, IntoBytes, Immutable)]
 struct Field {
     data: u8,
-}
-impl WritableFrameField for Field {
-    const SIZE: usize = 1;
-    fn write_to<W: embedded_io::Write>(self, writer: &mut W) -> Result<(), W::Error> {
-        writer.write_all(&[self.data])
-    }
 }
 
 impl From<[u8; 1]> for Field {

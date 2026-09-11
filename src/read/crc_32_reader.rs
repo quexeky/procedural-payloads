@@ -22,8 +22,8 @@ impl<'a, R: Read> Crc32Reader<R> {
     pub fn new(reader: R, hasher: Hasher) -> Self {
         Self { hasher, reader }
     }
-    pub fn into_inner(self) -> Hasher {
-        self.hasher
+    pub fn into_inner(self) -> (Hasher, R) {
+        (self.hasher, self.reader)
     }
     pub fn finish(self) -> u32 {
         self.hasher.finalize()

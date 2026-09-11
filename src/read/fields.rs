@@ -28,7 +28,9 @@ where
             _frame_type: PhantomData,
         }
     }
-    pub fn finish(self) {}
+    pub fn finish(self) -> R{
+        self.reader
+    }
 }
 
 impl<'a, T: ReadableFrameField, R: Read> Iterator for FieldIterator<T, R>
