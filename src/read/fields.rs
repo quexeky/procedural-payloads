@@ -2,7 +2,7 @@ use core::marker::PhantomData;
 use embedded_io::Read;
 use zerocopy::TryFromBytes;
 
-use crate::read::{error::Error, readable::Readable};
+use crate::read::{error::ReadError, readable::Readable};
 
 pub trait ReadableFrameField: Readable {}
 
@@ -37,7 +37,7 @@ impl<'a, T: ReadableFrameField, R: Read> Iterator for FieldIterator<T, R>
 where
     [(); T::SIZE]:,
 {
-    type Item = Result<T, Error<R::Error>>;
+    type Item = Result<T, ReadError<R::Error>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.elements_remaining == 0 {
@@ -50,6 +50,6 @@ where
             Err(e) => return Some(Err(e.into())),
         };
         let next = T::read::<R>(buf);
-        Some(next.map_err(|_| Error::InvalidCast))
+        Some(next.map_err(|_| ReadError::InvalidCast))
     }
 }

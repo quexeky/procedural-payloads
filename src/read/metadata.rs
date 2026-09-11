@@ -1,7 +1,7 @@
 use core::{marker::PhantomData, mem::MaybeUninit, ops::Deref};
 use embedded_io::Read;
 
-use crate::read::{error::Error, readable::Readable};
+use crate::read::{error::ReadError, readable::Readable};
 
 pub trait ReadableMetadataField: Readable {
     fn num_fields(&self) -> usize;
@@ -46,7 +46,7 @@ impl<M: ReadableMetadataField> MetadataCache<UnCached, M> {
             metadata: MaybeUninit::uninit(),
         }
     }
-    pub fn load<R: Read>(self, reader: &mut R) -> Result<MetadataCache<Cached, M>, Error<R::Error>>
+    pub fn load<R: Read>(self, reader: &mut R) -> Result<MetadataCache<Cached, M>, ReadError<R::Error>>
     where
         [(); M::SIZE]:,
     {

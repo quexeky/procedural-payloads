@@ -1,13 +1,13 @@
 #[derive(Debug)]
-pub enum Error<E> {
+pub enum WriteError<E> {
     TooMuchPlannedData,
     InsufficientDataWritten,
     ExcessData,
     Other(E),
 }
 
-impl<E: embedded_io::Error> From<E> for Error<E> {
+impl<E: embedded_io::Error> From<E> for WriteError<E> {
     fn from(value: E) -> Self {
-        Error::Other(value)
+        WriteError::Other(value)
     }
 }

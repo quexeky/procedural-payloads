@@ -1,7 +1,7 @@
 use crc32fast::Hasher;
 use embedded_io::Write;
 use procedural_payloads::write::{
-    crc_32_writer::Crc32Writer, error::Error, metadata::WritableMetadataField,
+    crc_32_writer::Crc32Writer, error::WriteError, metadata::WritableMetadataField,
     payload::WritablePayload,
 };
 use zerocopy::{Immutable, IntoBytes};
@@ -106,7 +106,7 @@ fn finish_errors_when_no_fields_have_been_written() {
         .unwrap();
 
     let err = payload.finish().unwrap_err();
-    assert!(matches!(err, Error::InsufficientDataWritten));
+    assert!(matches!(err, WriteError::InsufficientDataWritten));
 }
 
 #[test]
@@ -126,7 +126,7 @@ fn finish_errors_when_some_fields_are_missing() {
     }
 
     let err = payload.finish().unwrap_err();
-    assert!(matches!(err, Error::InsufficientDataWritten));
+    assert!(matches!(err, WriteError::InsufficientDataWritten));
 }
 
 #[test]
@@ -147,7 +147,7 @@ fn write_field_errors_after_all_fields_are_written() {
 
     let err = payload.write_field(Field { data: 56 }).unwrap_err();
 
-    assert!(matches!(err, Error::ExcessData));
+    assert!(matches!(err, WriteError::ExcessData));
 }
 
 #[test]
@@ -197,7 +197,7 @@ fn begin_rejects_exactly_65536_planned_field_bytes() {
     let result = WritablePayload::<EmptyMetadata, _, Field, _>::new(&mut buf_slice)
         .begin(EmptyMetadata { fields: 65536 });
 
-    assert!(matches!(result, Err(Error::TooMuchPlannedData)));
+    assert!(matches!(result, Err(WriteError::TooMuchPlannedData)));
 }
 
 #[test]

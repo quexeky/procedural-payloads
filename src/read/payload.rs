@@ -1,5 +1,5 @@
 use crate::read::{
-    error::Error,
+    error::ReadError,
     fields::{FieldIterator, ReadableFrameField},
     metadata::{Cached, MetadataCache, MetadataState, ReadableMetadataField, UnCached},
 };
@@ -38,7 +38,7 @@ impl<'a, M: ReadableMetadataField, T: ReadableFrameField, R: Read> IntoIterator
 where
     [(); T::SIZE]:,
 {
-    type Item = Result<T, Error<R::Error>>;
+    type Item = Result<T, ReadError<R::Error>>;
 
     type IntoIter = FieldIterator<T, R>;
 
@@ -58,7 +58,7 @@ impl<'a, M: ReadableMetadataField, T: ReadableFrameField, R: Read>
             reader,
         }
     }
-    pub fn load(mut self) -> Result<ReadablePayload<M, Cached, T, R>, Error<R::Error>>
+    pub fn load(mut self) -> Result<ReadablePayload<M, Cached, T, R>, ReadError<R::Error>>
     where
         [(); M::SIZE]:,
     {

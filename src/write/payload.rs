@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use embedded_io::Write;
 
 use crate::write::{
-    error::Error,
+    error::WriteError,
     fields::WritableFrameField,
     metadata::{MetadataWriteState, NotWritten, WritableMetadataField, Written},
 };
@@ -34,14 +34,14 @@ impl<M: WritableMetadataField, T: WritableFrameField, W: Write>
     pub fn begin(
         mut self,
         metadata: M,
-    ) -> Result<WritablePayload<M, Written, T, W>, Error<W::Error>> {
+    ) -> Result<WritablePayload<M, Written, T, W>, WriteError<W::Error>> {
         let num_fields = metadata.num_fields();
         let planned = num_fields
             .checked_mul(T::SIZE)
-            .ok_or(Error::TooMuchPlannedData)?;
+            .ok_or(WriteError::TooMuchPlannedData)?;
         
         if planned >= 65536 {
-            return Err(Error::TooMuchPlannedData);
+            return Err(WriteError::TooMuchPlannedData);
         }
         
         metadata.write_to(&mut self.writer)?;
@@ -58,9 +58,9 @@ impl<M: WritableMetadataField, T: WritableFrameField, W: Write>
 impl<'a, M: WritableMetadataField, T: WritableFrameField, W: Write>
     WritablePayload<M, Written, T, W>
 {
-    pub fn write_field(&mut self, field: T) -> Result<(), Error<W::Error>> {
+    pub fn write_field(&mut self, field: T) -> Result<(), WriteError<W::Error>> {
         if self.metadata_state.fields_remaining == 0 {
-            return Err(Error::ExcessData);
+            return Err(WriteError::ExcessData);
         }
         self.metadata_state.fields_remaining -= 1;
         field.write_to(&mut self.writer)?;
@@ -69,9 +69,9 @@ impl<'a, M: WritableMetadataField, T: WritableFrameField, W: Write>
     pub fn fields_remaining(&self) -> usize {
         self.metadata_state.fields_remaining
     }
-    pub fn finish(mut self) -> Result<W, Error<W::Error>> {
+    pub fn finish(mut self) -> Result<W, WriteError<W::Error>> {
         if self.metadata_state.fields_remaining != 0 {
-            return Err(Error::InsufficientDataWritten);
+            return Err(WriteError::InsufficientDataWritten);
         }
         self.writer.flush()?;
         Ok(self.writer)
