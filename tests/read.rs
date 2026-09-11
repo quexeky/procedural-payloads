@@ -52,6 +52,7 @@ fn create_payload() {
     }
 }
 
+use procedural_payloads::read::error::ReadError;
 use procedural_payloads::read::fields::FieldIterator;
 use procedural_payloads::read::metadata::{Cached, UnCached};
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};
@@ -61,9 +62,9 @@ fn load_fails_when_metadata_is_short() {
     let short = [0u8; 7];
     let mut short_slice = short.as_slice();
 
-    let payload = ReadablePayload::<Metadata, UnCached, Field, _>::new(&mut short_slice);
+    let payload = ReadablePayload::<UnCached, Field, _>::new(&mut short_slice);
 
-    assert!(payload.load().is_err());
+    assert!(payload.load::<Metadata>().is_err());
 }
 
 #[test]
@@ -71,8 +72,8 @@ fn iterator_reports_read_error_when_fields_are_missing() {
     let data = [0u8; 10];
     let mut data_slice = data.as_slice();
 
-    let payload = ReadablePayload::<Metadata, UnCached, Field, _>::new(&mut data_slice);
-    let payload = payload.load().unwrap();
+    let payload = ReadablePayload::<UnCached, Field, _>::new(&mut data_slice);
+    let payload = payload.load::<Metadata>().unwrap();
 
     let mut iter = payload.into_iter();
 
@@ -86,8 +87,8 @@ fn iterator_returns_exactly_metadata_field_count() {
     let data = [1u8; 64];
     let mut data_slice = data.as_slice();
 
-    let payload = ReadablePayload::<Metadata, UnCached, Field, _>::new(&mut data_slice);
-    let payload = payload.load().unwrap();
+    let payload = ReadablePayload::new(&mut data_slice);
+    let payload: ReadablePayload<Cached<Metadata>, Field, &mut &[u8]> = payload.load::<Metadata>().unwrap();
 
     let mut count = 0;
     for field in payload.into_iter() {
@@ -107,7 +108,7 @@ fn create_payload_from_existing_metadata() {
     let mut data_slice = field_data.as_slice();
 
     let metadata = Metadata::try_read_from_bytes(&[7; 8]).unwrap();
-    let payload = ReadablePayload::<Metadata, Cached, Field, _>::from_metadata(
+    let payload = ReadablePayload::<Cached<Metadata>, Field, _>::from_metadata(
         &mut data_slice,
         metadata,
     );
@@ -190,4 +191,30 @@ fn reader_eof_does_not_affect_crc() {
     assert_eq!(reader.read(&mut tmp).unwrap(), 0);
 
     assert_eq!(reader.finish(), crc32fast::hash(source));
+}
+
+#[test]
+fn field_iterator_finish_errors_when_fields_remain() {
+    let data = [1u8, 2u8];
+    let mut data_slice = data.as_slice();
+
+    let mut iter = FieldIterator::<Field, _>::new(3, &mut data_slice);
+
+    assert!(iter.next().is_some());
+    assert!(iter.next().is_some());
+    assert!(matches!(iter.next(), Some(Err(_))));
+
+    assert!(matches!(iter.finish(), Err(ReadError::InsufficientData)));
+}
+
+#[test]
+fn field_iterator_finish_returns_reader_when_exhausted() {
+    let data = [1u8, 2u8];
+    let mut data_slice = data.as_slice();
+
+    let mut iter = FieldIterator::<Field, _>::new(2, &mut data_slice);
+    iter.next().unwrap().unwrap();
+    iter.next().unwrap().unwrap();
+
+    assert!(iter.finish().is_ok());
 }

@@ -3,6 +3,10 @@ pub enum WriteError<E> {
     TooMuchPlannedData,
     InsufficientDataWritten,
     ExcessData,
+    PayloadLengthMismatch {
+        expected: usize,
+        declared: u16,
+    },
     Other(E),
 }
 

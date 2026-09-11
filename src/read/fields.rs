@@ -17,7 +17,7 @@ where
     _frame_type: PhantomData<T>,
 }
 
-impl<'a, T: ReadableFrameField, R: Read> FieldIterator<T, R>
+impl<T: ReadableFrameField, R: Read> FieldIterator<T, R>
 where
     [(); T::SIZE]:,
 {
@@ -28,12 +28,15 @@ where
             _frame_type: PhantomData,
         }
     }
-    pub fn finish(self) -> R{
-        self.reader
+    pub fn finish(self) -> Result<R, ReadError<R::Error>> {
+        if self.elements_remaining != 0 {
+            return Err(ReadError::InsufficientData);
+        }
+        Ok(self.reader)
     }
 }
 
-impl<'a, T: ReadableFrameField, R: Read> Iterator for FieldIterator<T, R>
+impl<T: ReadableFrameField, R: Read> Iterator for FieldIterator<T, R>
 where
     [(); T::SIZE]:,
 {
@@ -44,12 +47,12 @@ where
             return None;
         }
         let mut buf = [0u8; T::SIZE];
-        self.elements_remaining -= 1;
         match self.reader.read_exact(&mut buf) {
             Ok(()) => {}
             Err(e) => return Some(Err(e.into())),
         };
-        let next = T::read::<R>(buf);
+        self.elements_remaining -= 1;
+        let next = T::read(buf);
         Some(next.map_err(|_| ReadError::InvalidCast))
     }
 }

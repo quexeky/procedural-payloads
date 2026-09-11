@@ -55,7 +55,7 @@ impl<M: WritableMetadataField, T: WritableFrameField, W: Write>
     }
 }
 
-impl<'a, M: WritableMetadataField, T: WritableFrameField, W: Write>
+impl<M: WritableMetadataField, T: WritableFrameField, W: Write>
     WritablePayload<M, Written, T, W>
 {
     pub fn write_field(&mut self, field: T) -> Result<(), WriteError<W::Error>> {

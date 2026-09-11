@@ -3,13 +3,11 @@
 
 use crc32fast::Hasher;
 use embedded_io::{Read, Write};
-use procedural_payloads::write::{
-    metadata::WritableMetadataField, payload::WritablePayload,
-};
+use procedural_payloads::write::{metadata::WritableMetadataField, payload::WritablePayload};
 use procedural_payloads::{
     read::{
         crc_32_reader::Crc32Reader,
-        metadata::{ReadableMetadataField, UnCached},
+        metadata::{ReadableMetadataField},
         payload::ReadablePayload,
     },
     write::crc_32_writer::Crc32Writer,
@@ -58,8 +56,12 @@ fn write_then_read_roundtrip() {
     writer.finish().unwrap();
     let mut data_slice = data.as_slice();
 
-    let reader = ReadablePayload::<Metadata, UnCached, Field, _>::new(&mut data_slice);
-    let reader = reader.load().unwrap();
+    let reader = ReadablePayload::new(&mut data_slice);
+    let reader: ReadablePayload<
+        procedural_payloads::read::metadata::Cached<Metadata>,
+        Field,
+        &mut &[u8],
+    > = reader.load().unwrap();
 
     assert_eq!(*reader.metadata(), metadata);
 
@@ -92,8 +94,12 @@ fn write_then_read_roundtrip_with_crc() {
     let mut data_slice = data.as_slice();
     let mut hasher = Crc32Reader::new(&mut data_slice, Hasher::new());
 
-    let reader = ReadablePayload::<Metadata, UnCached, Field, _>::new(&mut hasher);
-    let reader = reader.load().unwrap();
+    let reader = ReadablePayload::new(&mut hasher);
+    let reader: ReadablePayload<
+        procedural_payloads::read::metadata::Cached<Metadata>,
+        Field,
+        &mut Crc32Reader<&mut &[u8]>,
+    > = reader.load().unwrap();
 
     assert_eq!(*reader.metadata(), metadata);
 
