@@ -17,3 +17,9 @@ impl Written {
 impl MetadataWriteState for Written {}
 pub struct NotWritten;
 impl MetadataWriteState for NotWritten {}
+
+impl WritableMetadataField for () {
+    fn num_fields(&self) -> usize {
+        0
+    }
+}

@@ -6,6 +6,12 @@ pub trait ReadableMetadataField: Readable {
     fn num_fields(&self) -> usize;
 }
 
+impl ReadableMetadataField for () {
+    fn num_fields(&self) -> usize {
+        0
+    }
+}
+
 pub trait MetadataState {}
 pub struct Cached<M: ReadableMetadataField> {
     pub metadata: M,
