@@ -2,7 +2,7 @@ use crc32fast::Hasher;
 use embedded_io::Write;
 use procedural_payloads::write::{
     crc_32_writer::Crc32Writer, error::WriteError, metadata::WritableMetadataField,
-    payload::WritablePayload,
+    payload::WritablePayload, writeable::Writeable,
 };
 use zerocopy::{Immutable, IntoBytes};
 
@@ -63,14 +63,31 @@ fn create_payload() {
     assert_eq!(data, expected_data);
 }
 
-#[derive(IntoBytes, Immutable)]
-struct EmptyMetadata {
-    fields: usize,
+struct OverLimitMetadata;
+
+impl Writeable for OverLimitMetadata {
+    fn write_to<W: Write>(&self, _writer: &mut W) -> Result<(), W::Error> {
+        Ok(())
+    }
 }
 
-impl WritableMetadataField for EmptyMetadata {
+impl WritableMetadataField for OverLimitMetadata {
     fn num_fields(&self) -> usize {
-        self.fields
+        65536
+    }
+}
+
+struct MaxFieldsMetadata;
+
+impl Writeable for MaxFieldsMetadata {
+    fn write_to<W: Write>(&self, _writer: &mut W) -> Result<(), W::Error> {
+        Ok(())
+    }
+}
+
+impl WritableMetadataField for MaxFieldsMetadata {
+    fn num_fields(&self) -> usize {
+        65535
     }
 }
 
@@ -194,8 +211,8 @@ fn begin_rejects_exactly_65536_planned_field_bytes() {
     let mut buf: [u8; 0] = [];
     let mut buf_slice = buf.as_mut_slice();
 
-    let result = WritablePayload::<EmptyMetadata, _, Field, _>::new(&mut buf_slice)
-        .begin(EmptyMetadata { fields: 65536 });
+    let result = WritablePayload::<OverLimitMetadata, _, Field, _>::new(&mut buf_slice)
+        .begin(OverLimitMetadata);
 
     assert!(matches!(result, Err(WriteError::TooMuchPlannedData)));
 }
@@ -205,8 +222,8 @@ fn begin_accepts_65535_planned_field_bytes() {
     let mut buf: [u8; 8] = [0; 8];
     let mut buf_slice = buf.as_mut_slice();
 
-    let result = WritablePayload::<EmptyMetadata, _, Field, _>::new(&mut buf_slice)
-        .begin(EmptyMetadata { fields: 65535 });
+    let result = WritablePayload::<MaxFieldsMetadata, _, Field, _>::new(&mut buf_slice)
+        .begin(MaxFieldsMetadata);
 
     assert!(result.is_ok());
 }

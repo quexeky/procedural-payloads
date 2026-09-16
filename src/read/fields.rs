@@ -13,6 +13,7 @@ where
     [(); T::SIZE]:,
 {
     elements_remaining: usize,
+    errored: bool,
     reader: R,
     _frame_type: PhantomData<T>,
 }
@@ -24,12 +25,13 @@ where
     pub fn new(num_fields: usize, reader: R) -> Self {
         Self {
             elements_remaining: num_fields,
+            errored: false,
             reader,
             _frame_type: PhantomData,
         }
     }
     pub fn finish(self) -> Result<R, ReadError<R::Error>> {
-        if self.elements_remaining != 0 {
+        if self.errored || self.elements_remaining != 0 {
             return Err(ReadError::InsufficientData);
         }
         Ok(self.reader)
@@ -43,16 +45,21 @@ where
     type Item = Result<T, ReadError<R::Error>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.elements_remaining == 0 {
+        if self.errored || self.elements_remaining == 0 {
             return None;
         }
         let mut buf = [0u8; T::SIZE];
-        match self.reader.read_exact(&mut buf) {
-            Ok(()) => {}
-            Err(e) => return Some(Err(e.into())),
-        };
+        if let Err(e) = self.reader.read_exact(&mut buf) {
+            self.errored = true;
+            return Some(Err(ReadError::ReadExact(e)));
+        }
         self.elements_remaining -= 1;
-        let next = T::read(buf);
-        Some(next.map_err(|_| ReadError::InvalidCast))
+        match T::read(buf) {
+            Ok(field) => Some(Ok(field)),
+            Err(_) => {
+                self.errored = true;
+                Some(Err(ReadError::InvalidCast))
+            }
+        }
     }
 }

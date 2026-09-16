@@ -35,20 +35,20 @@ impl<M: WritableMetadataField, T: WritableFrameField, W: Write>
         mut self,
         metadata: M,
     ) -> Result<WritablePayload<M, Written, T, W>, WriteError<W::Error>> {
-        let num_fields = metadata.num_fields();
-        let planned = num_fields
+        let planned = metadata
+            .num_fields()
             .checked_mul(T::SIZE)
+            .and_then(|fields| fields.checked_add(size_of::<M>()))
             .ok_or(WriteError::TooMuchPlannedData)?;
         
         if planned >= 65536 {
             return Err(WriteError::TooMuchPlannedData);
         }
-        
         metadata.write_to(&mut self.writer)?;
 
         Ok(WritablePayload {
             _metadata_type: PhantomData,
-            metadata_state: Written::new(num_fields),
+            metadata_state: Written::new(metadata.num_fields()),
             _frame_type: PhantomData,
             writer: self.writer,
         })
@@ -62,8 +62,8 @@ impl<M: WritableMetadataField, T: WritableFrameField, W: Write>
         if self.metadata_state.fields_remaining == 0 {
             return Err(WriteError::ExcessData);
         }
-        self.metadata_state.fields_remaining -= 1;
         field.write_to(&mut self.writer)?;
+        self.metadata_state.fields_remaining -= 1;
         Ok(())
     }
     pub fn fields_remaining(&self) -> usize {
