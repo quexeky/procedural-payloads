@@ -1,6 +1,6 @@
+use crate::read::error::ReadError;
 use crc32fast::Hasher;
 use embedded_io::{ErrorType, Read};
-use crate::read::error::ReadError;
 
 pub struct Crc32Reader<R: Read> {
     reader: R,

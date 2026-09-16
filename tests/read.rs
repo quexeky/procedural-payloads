@@ -1,12 +1,10 @@
 #![feature(generic_const_exprs)]
 #![allow(incomplete_features)]
 
-
 use crc32fast::Hasher;
 use embedded_io::Read;
 use procedural_payloads::read::{
-    crc_32_reader::Crc32Reader, metadata::ReadableMetadataField,
-    payload::ReadablePayload,
+    crc_32_reader::Crc32Reader, metadata::ReadableMetadataField, payload::ReadablePayload,
 };
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, IntoBytes, KnownLayout, Immutable, TryFromBytes)]
@@ -43,7 +41,10 @@ fn create_payload() {
     let payload = ReadablePayload::new(&mut data_slice).load().unwrap();
     let metadata: Metadata = *payload.metadata();
 
-    assert_eq!(metadata, Metadata::try_read_from_bytes(&metadata_chunk).unwrap());
+    assert_eq!(
+        metadata,
+        Metadata::try_read_from_bytes(&metadata_chunk).unwrap()
+    );
 
     let iter = payload.into_iter();
 
@@ -88,7 +89,8 @@ fn iterator_returns_exactly_metadata_field_count() {
     let mut data_slice = data.as_slice();
 
     let payload = ReadablePayload::new(&mut data_slice);
-    let payload: ReadablePayload<Cached<Metadata>, Field, &mut &[u8]> = payload.load::<Metadata>().unwrap();
+    let payload: ReadablePayload<Cached<Metadata>, Field, &mut &[u8]> =
+        payload.load::<Metadata>().unwrap();
 
     let mut count = 0;
     for field in payload.into_iter() {
@@ -108,12 +110,13 @@ fn create_payload_from_existing_metadata() {
     let mut data_slice = field_data.as_slice();
 
     let metadata = Metadata::try_read_from_bytes(&[7; 8]).unwrap();
-    let payload = ReadablePayload::<Cached<Metadata>, Field, _>::from_metadata(
-        &mut data_slice,
-        metadata,
-    );
+    let payload =
+        ReadablePayload::<Cached<Metadata>, Field, _>::from_metadata(&mut data_slice, metadata);
 
-    assert_eq!(*payload.metadata(), Metadata::try_read_from_bytes(&[7; 8]).unwrap());
+    assert_eq!(
+        *payload.metadata(),
+        Metadata::try_read_from_bytes(&[7; 8]).unwrap()
+    );
 
     for (i, field) in payload.into_iter().enumerate() {
         assert_eq!(field.unwrap(), Field { data: i as u8 });

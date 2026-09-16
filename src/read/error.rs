@@ -6,8 +6,5 @@ pub enum ReadError<E: embedded_io::Error> {
     ReadExact(#[from] ReadExactError<E>),
     InsufficientData,
     InvalidCast,
-    InvalidCrc {
-        calculated: u32,
-        read: u32
-    }
+    InvalidCrc { calculated: u32, read: u32 },
 }

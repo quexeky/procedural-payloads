@@ -5,11 +5,7 @@ use crc32fast::Hasher;
 use embedded_io::{Read, Write};
 use procedural_payloads::write::{metadata::WritableMetadataField, payload::WritablePayload};
 use procedural_payloads::{
-    read::{
-        crc_32_reader::Crc32Reader,
-        metadata::{ReadableMetadataField},
-        payload::ReadablePayload,
-    },
+    read::{crc_32_reader::Crc32Reader, metadata::ReadableMetadataField, payload::ReadablePayload},
     write::crc_32_writer::Crc32Writer,
 };
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes};

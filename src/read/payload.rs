@@ -6,11 +6,7 @@ use crate::read::{
 use core::marker::PhantomData;
 use embedded_io::Read;
 
-pub struct ReadablePayload<
-    M: MetadataState,
-    T: ReadableFrameField,
-    R: Read,
-> {
+pub struct ReadablePayload<M: MetadataState, T: ReadableFrameField, R: Read> {
     metadata: M,
     _field_iterator_marker: PhantomData<T>,
     reader: R,
@@ -53,7 +49,9 @@ impl<T: ReadableFrameField, R: Read> ReadablePayload<UnCached, T, R> {
             reader,
         }
     }
-    pub fn load<M: ReadableMetadataField>(mut self) -> Result<ReadablePayload<Cached<M>, T, R>, ReadError<R::Error>>
+    pub fn load<M: ReadableMetadataField>(
+        mut self,
+    ) -> Result<ReadablePayload<Cached<M>, T, R>, ReadError<R::Error>>
     where
         [(); M::SIZE]:,
     {
