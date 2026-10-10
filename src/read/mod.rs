@@ -1,3 +1,5 @@
+#[cfg(feature = "async")]
+pub mod asynchronous;
 pub mod crc_32_reader;
 pub mod error;
 pub mod fields;
